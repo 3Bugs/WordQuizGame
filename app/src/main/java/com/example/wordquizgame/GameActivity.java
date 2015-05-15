@@ -69,7 +69,6 @@ public class GameActivity extends ActionBarActivity {
     private SQLiteDatabase mDatabase;               // ตัวฐานข้อมูลที่เราจะอ่าน/เขียนข้อมูล
     private int mDifficulty;                        // ค่าระดับความยากที่จะเก็บลงฐานข้อมูล
 
-    private Bundle mSavedInstanceState;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -114,7 +113,7 @@ public class GameActivity extends ActionBarActivity {
         //readSettings();                     // อ่านค่าตัวเลือกจาก shared preference
         //getImageFileName();                 // โหลดรายชื่อไฟล์มาเก็บใน ArrayList
         //startQuiz();                        // เริ่มเกมใหม่
-        GetImageFileNameTask task = new GetImageFileNameTask();
+        GetImageFileNameTask task = new GetImageFileNameTask(savedInstanceState);
         task.execute();
     }
 
@@ -152,6 +151,12 @@ public class GameActivity extends ActionBarActivity {
 
     private class GetImageFileNameTask extends AsyncTask<Void, Void, Void> {
 
+        Bundle savedInstanceState;
+
+        private GetImageFileNameTask(Bundle savedInstanceState) {
+            this.savedInstanceState = savedInstanceState;
+        }
+
         @Override
         protected Void doInBackground(Void... params) {
             getImageFileName();
@@ -161,7 +166,11 @@ public class GameActivity extends ActionBarActivity {
         @Override
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
-            startQuiz();
+            if (savedInstanceState == null) {
+                startQuiz();
+            } else {
+                resumeQuiz(savedInstanceState);
+            }
         }
     }
 
@@ -206,6 +215,33 @@ public class GameActivity extends ActionBarActivity {
         }
 
         loadNextQuestion();                 // โหลดคำถามข้อแรก
+    }
+
+    private void resumeQuiz(Bundle savedInstanceState) {
+        mScore = savedInstanceState.getInt(SCORE);
+        mTotalGuesses = savedInstanceState.getInt(TOTAL_GUESSES);
+        mQuizWordsList = savedInstanceState.getStringArrayList(QUIZ_WORDS_LIST);
+
+        mQuestionNumberTextView.setText(savedInstanceState.getString(QUESTION_NUMBER_TEXT_VIEW));
+        mAnswerTextView.setText(savedInstanceState.getString(ANSWER_TEXT_VIEW));
+        mAnswerTextView.setTextColor(savedInstanceState.getInt(ANSWER_TEXT_VIEW_COLOR));
+        mAnswerFileName = savedInstanceState.getString(ANSWER_FILE_NAME);
+
+        mChoiceWords = savedInstanceState.getStringArrayList(CHOICE_WORDS);
+
+        loadQuestionImage();
+        createChoiceButtons();
+
+        boolean[] buttonStatesArray = savedInstanceState.getBooleanArray(BUTTON_STATES_LIST);
+
+        for (int row = 0; row < mNumChoices / COLUMNS_PER_ROW; row++) {
+            TableRow currentTableRow = (TableRow) mButtonTableLayout.getChildAt(row);
+
+            for (int column = 0; column < COLUMNS_PER_ROW; column++) {
+                Button choiceButton = (Button) currentTableRow.getChildAt(column);
+                choiceButton.setEnabled(buttonStatesArray[row * COLUMNS_PER_ROW + column]);
+            }
+        }
     }
 
     private void loadNextQuestion() {
@@ -258,7 +294,7 @@ public class GameActivity extends ActionBarActivity {
 
             // ถ้า mChoiceWords ยังไม่มีชื่อไฟล์ภาพนั้นและไม่ซ้ำกับคำตอบ ให้เพิ่มชื่อไฟล์นั้นเข้าไปใน mChoiceWords
             // (แต่ถ้ามีชื่อไฟล์นั้นแล้วหรือซ้ำกับคำตอบ ก็จะไปสุ่มเลือกมาใหม่)
-            if (!mChoiceWords.contains(fileName) && !fileName.equals(mAnswerFileName)) {
+            if (!mChoiceWords.contains(getWord(fileName)) && !fileName.equals(mAnswerFileName)) {
                 mChoiceWords.add(getWord(fileName));
             }
         }
@@ -451,5 +487,52 @@ public class GameActivity extends ActionBarActivity {
             Log.d(TAG, "Insert data into database: FAILED !");
         }
     }
+
+    /*************************************************************************/
+    private static final String ANSWER_TEXT_VIEW = "answerTextView";
+    private static final String ANSWER_TEXT_VIEW_COLOR = "answerTextViewColor";
+    private static final String QUESTION_NUMBER_TEXT_VIEW = "questionNumberTextView";
+    private static final String ANSWER_FILE_NAME = "questionImageFileName";
+    private static final String CHOICE_WORDS = "choiceWords";
+    private static final String SCORE = "score";
+    private static final String TOTAL_GUESSES = "totalGuesses";
+    private static final String QUIZ_WORDS_LIST = "quizWordsList";
+    private static final String BUTTON_STATES_LIST = "buttonStatesList";
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        outState.putString(ANSWER_TEXT_VIEW, mAnswerTextView.getText().toString());
+        outState.putInt(ANSWER_TEXT_VIEW_COLOR, mAnswerTextView.getCurrentTextColor());
+        outState.putString(QUESTION_NUMBER_TEXT_VIEW,
+                mQuestionNumberTextView.getText().toString());
+        outState.putString(ANSWER_FILE_NAME, mAnswerFileName);
+
+        outState.putStringArrayList(CHOICE_WORDS, mChoiceWords);
+        outState.putInt(SCORE, mScore);
+        outState.putInt(TOTAL_GUESSES, mTotalGuesses);
+
+        outState.putStringArrayList(QUIZ_WORDS_LIST, mQuizWordsList);
+
+        ArrayList<Boolean> buttonStatesList = new ArrayList<Boolean>();
+        for (int row = 0; row < mNumChoices / COLUMNS_PER_ROW; row++) {
+            TableRow currentTableRow = (TableRow) mButtonTableLayout.getChildAt(row);
+
+            for (int column = 0; column < COLUMNS_PER_ROW; column++) {
+                Button choiceButton = (Button) currentTableRow.getChildAt(column);
+                if (choiceButton != null) {
+                    buttonStatesList.add(choiceButton.isEnabled());
+                }
+            }
+        }
+
+        boolean[] buttonStatesArray = new boolean[buttonStatesList.size()];
+        for (int i = 0; i < buttonStatesList.size(); i++) {
+            buttonStatesArray[i] = buttonStatesList.get(i);
+        }
+        outState.putBooleanArray(BUTTON_STATES_LIST, buttonStatesArray);
+    }
+    /*************************************************************************/
 
 }

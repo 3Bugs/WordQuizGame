@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Word Quiz Game</string>
     <string name="title_activity_game">GameActivity</string>
+    <string name="title_activity_high_score">คะแนนสูงสุด</string>
     <string name="action_settings">ตัวเลือก</string>
 
     <!-- ข้อความในหน้าหลัก -->
@@ -51,7 +52,4 @@
     <string name="more_categories_message">คุณต้องเลือกหมวดคำศัพท์อย่างน้อย 1 หมวด</string>
     <string name="ok">OK</string>
     <string name="open_settings">เข้าสู่หน้าการตั้งค่า</string>
-    <string name="title_activity_high_score">HighScoreActivity</string>
-
-    <string name="hello_world">Hello world!</string>
 </resources>
